@@ -13,7 +13,7 @@ This version is not the final version of our code, we will wpdate the full versi
 ## Preparation
 
 ### Download the elecricity dataset 
-The data can e found at ./data/ts2vec
+The data can be found at ./data/ts2vec
 
 ## Experiments 
 
