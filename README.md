@@ -11,7 +11,7 @@ Please install the packages in requirements.txt
 This version is not the final version of our code, we will update the full version ASAP.
 
 ## Data
-The electricity data can e found at ./data/ts2vec
+The electricity dataset can be found at ./data/ts2vec
 
 ## Experiments 
 ### Retrieval
@@ -25,7 +25,7 @@ python retrieval.py --type retrieval
 ```
 ### Training and forecasting for the electricity dataset
 ```shell
-python exe_forecasting.py --datatype electricity --nsample [number of samples]
+python exe_forecasting.py --datatype electricity
 ```
 
 ## Acknowledgements
