@@ -1,6 +1,5 @@
 # RATD
-This repository contains the experiments in the Neurips 2024 paper "Retrieval-Augmented Diffusion Models
-for Time Series Forecasting" by Jingwei Liu, Ling Yang, Hongyan Li and Shenda Hong.
+This repository contains the experiments in the Neurips 2024 paper "[Retrieval-Augmented Diffusion Models for Time Series Forecasting](https://arxiv.org/abs/2410.18712)" by Jingwei Liu, Ling Yang, Hongyan Li and Shenda Hong.
 
 ## Requirement
 
