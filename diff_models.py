@@ -266,7 +266,7 @@ class ResidualBlock(nn.Module):
             reference = torch.sigmoid(reference)# (B,K,L)
             reference = reference.reshape(B, 1, K, L)
             reference = repeat(reference, 'b a n c -> b (a f) n c', f=channel)# (B*2*channel, L,K)
-            cond_info = cond_info + reference
+            cond_info = cond_info + reference.reshape(B, channel, K*L)
             
         y = y + cond_info.reshape(B, channel, K*L)
 
