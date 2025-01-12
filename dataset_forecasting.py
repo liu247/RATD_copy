@@ -56,7 +56,7 @@ class Dataset_Electricity(Dataset):
         self.data_x = data[border1:border2]
         self.data_y = data[border1:border2]
         self.mask_data = np.ones_like(self.data_x)
-        self.reference = torch.load('./dataset/TCN/ele_idx_list.pt')
+        self.reference = torch.load('./data/TCN/ele_id_list.pt')
         self.reference=torch.clamp(self.reference,min=0, max=17885)
         
 
@@ -96,13 +96,13 @@ class Dataset_Electricity(Dataset):
         return self.scaler.inverse_transform(data)
 
 def get_dataloader(device, batch_size=8):
-    dataset = Dataset_Electricity(root_path='/data/0shared/liujingwei/dataset/ts2vec',flag='train',size=[96,0,168, 321])
+    dataset = Dataset_Electricity(root_path='./data/ts2vec',data_path="electricity_2012_hour.csv",flag='train',size=[96,0,168, 321])
     train_loader = DataLoader(
         dataset, batch_size=batch_size, shuffle=1)
-    valid_dataset = Dataset_Electricity(root_path='/data/0shared/liujingwei/dataset/ts2vec',flag='val',size=[96,0,168, 321])
+    valid_dataset = Dataset_Electricity(root_path='./data/ts2vec',data_path="electricity_2012_hour.csv",flag='val',size=[96,0,168,321])
     valid_loader = DataLoader(
         valid_dataset, batch_size=batch_size, shuffle=0)
-    test_dataset = Dataset_Electricity(root_path='/data/0shared/liujingwei/dataset/ts2vec',flag='test',size=[96,0,168,321])
+    test_dataset = Dataset_Electricity(root_path='./data/ts2vec',data_path="electricity_2012_hour.csv",flag='test',size=[96,0,168,321])
     test_loader = DataLoader(
         test_dataset, batch_size=batch_size, shuffle=0)
 

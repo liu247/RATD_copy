@@ -5,7 +5,7 @@ import math
 import random
 from datetime import datetime
 import pickle
-from utils import pkl_load, pad_nan_to_target
+# from utils import pkl_load, pad_nan_to_target
 from scipy.io.arff import loadarff
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from pandas.tseries import offsets
@@ -985,18 +985,18 @@ def load_forecast_csv(name, univar=False):
     return data, train_slice, valid_slice, test_slice, scaler, pred_lens, n_covariate_cols
 
 
-def load_anomaly(name):
-    res = pkl_load(f'datasets/{name}.pkl')
-    return res['all_train_data'], res['all_train_labels'], res['all_train_timestamps'], \
-           res['all_test_data'],  res['all_test_labels'],  res['all_test_timestamps'], \
-           res['delay']
+# def load_anomaly(name):
+#     res = pkl_load(f'datasets/{name}.pkl')
+#     return res['all_train_data'], res['all_train_labels'], res['all_train_timestamps'], \
+#            res['all_test_data'],  res['all_test_labels'],  res['all_test_timestamps'], \
+#            res['delay']
 
 
-def gen_ano_train_data(all_train_data):
-    maxl = np.max([ len(all_train_data[k]) for k in all_train_data ])
-    pretrain_data = []
-    for k in all_train_data:
-        train_data = pad_nan_to_target(all_train_data[k], maxl, axis=0)
-        pretrain_data.append(train_data)
-    pretrain_data = np.expand_dims(np.stack(pretrain_data), 2)
-    return pretrain_data
+# def gen_ano_train_data(all_train_data):
+#     maxl = np.max([ len(all_train_data[k]) for k in all_train_data ])
+#     pretrain_data = []
+#     for k in all_train_data:
+#         train_data = pad_nan_to_target(all_train_data[k], maxl, axis=0)
+#         pretrain_data.append(train_data)
+#     pretrain_data = np.expand_dims(np.stack(pretrain_data), 2)
+#     return pretrain_data
