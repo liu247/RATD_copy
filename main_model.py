@@ -39,12 +39,12 @@ class RATD_base(nn.Module):
                 config_diff["beta_start"], config_diff["beta_end"], self.num_steps
             )
 
-        self.alpha_hat = 1 - self.beta
-        self.alpha = np.cumprod(self.alpha_hat)
+        self.alpha_hat = 1 - self.beta # control take origin data rate of each step
+        self.alpha = np.cumprod(self.alpha_hat) # accucumulate rate of each step
         self.alpha_torch = torch.tensor(self.alpha).float().to(self.device).unsqueeze(1).unsqueeze(1)
 
     def time_embedding(self, pos, d_model=128):
-        pe = torch.zeros(pos.shape[0], pos.shape[1], d_model).to(self.device)
+        pe = torch.zeros(pos.shape[0], pos.shape[1], d_model).to(self.device) # b, l ,d
         position = pos.unsqueeze(2)
         div_term = 1 / torch.pow(
             10000.0, torch.arange(0, d_model, 2).to(self.device) / d_model

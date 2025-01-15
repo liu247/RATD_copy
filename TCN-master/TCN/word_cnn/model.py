@@ -30,7 +30,7 @@ class TCN(nn.Module):
 
     def forward(self, input):
         """Input ought to have dimension (N, C_in, L_in), where L_in is the seq_len; here the input is (N, L, C)"""
-        emb = self.drop(self.encoder(input))
+        emb = self.drop(self.encoder(input.float()))
         y = self.tcn(emb.transpose(1, 2)).transpose(1, 2)
         y = self.decoder(y)
         return y.contiguous()

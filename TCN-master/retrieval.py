@@ -16,7 +16,7 @@ def all_retrieval(model, config):
     H=config["retrieval"]["H"]
     num = config["retrieval"]["num"]
     train_set = datautils.Dataset_Electricity(root_path=config["path"]["dataset_path"],data_path="electricity_2012_hour.csv", flag='train',size=[L, 0, L])
-    all_repr=torch.load('../data/TCN/ele_hisvec_list.pt')
+    all_repr=torch.load('./data/TCN/ele_hisvec_list.pt')
     references=[]
     with torch.no_grad():
         for i in tqdm(range(len(train_set) - L - H + 1)):
@@ -71,7 +71,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print(args)
 
-    path = "./config/" + args.config
+    path = "./TCN-master/config/" + args.config
     with open(path, "r") as f:
         config = yaml.safe_load(f)
 
@@ -80,7 +80,7 @@ if __name__ == '__main__':
             input_size=config["retrieval"]["length"],
             output_size=config["retrieval"]["length"], num_channels=[config["retrieval"]["length"]] * (config["retrieval"]["level"]) + [config["retrieval"]["length"]],
         ).to(config["retrieval"]["device"])
-    model=torch.load(config["path"]["encoder_path"], map_location='cuda:0')
+    model=torch.load(config["path"]["encoder_path"], map_location='cpu')
     if args.type == 'encode':
         all_encode(model,config)
     if args.type == 'retrieval':
