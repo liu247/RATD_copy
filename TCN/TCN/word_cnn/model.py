@@ -9,7 +9,7 @@ class TCN(nn.Module):
     def __init__(self, input_size, output_size, num_channels,
                  kernel_size=2, dropout=0.3, emb_dropout=0.1, tied_weights=False):
         super(TCN, self).__init__()
-        self.encoder = nn.Embedding(output_size, input_size)
+        self.encoder = nn.Linear(input_size, input_size)
         self.tcn = TemporalConvNet(input_size, num_channels, kernel_size, dropout=dropout)
 
         self.decoder = nn.Linear(num_channels[-1], output_size)
@@ -29,7 +29,7 @@ class TCN(nn.Module):
 
     def forward(self, input):
         """Input ought to have dimension (N, C_in, L_in), where L_in is the seq_len; here the input is (N, L, C)"""
-        emb = self.drop(self.encoder(input.float()))
+        emb = self.drop(self.encoder(input))
         y = self.tcn(emb.transpose(1, 2)).transpose(1, 2)
         y = self.decoder(y)
         return y.contiguous()

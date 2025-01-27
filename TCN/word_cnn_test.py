@@ -4,6 +4,7 @@ import math
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
+from torch.utils.data import DataLoader
 import torch.optim as optim
 import sys
 sys.path.append("../../")
@@ -11,14 +12,17 @@ from TCN.word_cnn.utils import *
 from TCN.word_cnn.model import *
 import pickle
 from random import randint
-
+import yaml
+import numpy as np
+from tqdm import tqdm
+import datautils
 
 parser = argparse.ArgumentParser(description='Sequence Modeling - Word-level Language Modeling')
 
 parser.add_argument('--batch_size', type=int, default=16, metavar='N',
                     help='batch size (default: 16)')
-parser.add_argument('--cuda', action='store_true',
-                    help='use CUDA (default: False)')
+parser.add_argument('--cuda', action='store_false',
+                    help='use CUDA (default: True)')
 parser.add_argument('--dropout', type=float, default=0.45,
                     help='dropout applied to layers (default: 0.45)')
 parser.add_argument('--emb_dropout', type=float, default=0.25,
@@ -53,6 +57,12 @@ parser.add_argument('--seq_len', type=int, default=80,
                     help='total sequence length, including effective history (default: 80)')
 parser.add_argument('--corpus', action='store_true',
                     help='force re-make the corpus (default: False)')
+parser.add_argument("--config", type=str, default="retrieval_ele.yaml")
+parser.add_argument("--modelfolder", type=str, default="")
+parser.add_argument(
+    "--type", type=str, default="encode", choices=["encode", "retrieval"]
+)
+parser.add_argument("--encoder", default="TCN")
 args = parser.parse_args()
 
 # Set the random seed manually for reproducibility.
@@ -62,28 +72,36 @@ if torch.cuda.is_available():
         print("WARNING: You have a CUDA device, so you should probably run with --cuda")
 
 print(args)
-corpus = data_generator(args)
-eval_batch_size = 10
-train_data = batchify(corpus.train, args.batch_size, args)
-val_data = batchify(corpus.valid, eval_batch_size, args)
-test_data = batchify(corpus.test, eval_batch_size, args)
 
+path = "./TCN/config/" + args.config
+with open(path, "r") as f:
+    config = yaml.safe_load(f)
 
-n_words = len(corpus.dictionary)
+config["retrieval"]["encoder"] = args.encoder
 
-num_chans = [args.nhid] * (args.levels - 1) + [args.emsize]
-k_size = args.ksize
-dropout = args.dropout
-emb_dropout = args.emb_dropout
-tied = args.tied
-model = TCN(args.emsize, n_words, num_chans, dropout=dropout, emb_dropout=emb_dropout, kernel_size=k_size, tied_weights=tied)
+# corpus = data_generator(args)
+# n_words = len(corpus.dictionary)
 
-if args.cuda:
-    model.cuda()
+L=config["retrieval"]["L"]
+H=config["retrieval"]["H"]
+train_data = datautils.Dataset_Electricity(root_path=config["path"]["dataset_path"], data_path="electricity_2012_hour.csv",flag='train',size=[L, 0, L])
+test_data = datautils.Dataset_Electricity(root_path=config["path"]["dataset_path"], data_path="electricity_2012_hour.csv",flag='test',size=[L, 0, L])
+val_data = datautils.Dataset_Electricity(root_path=config["path"]["dataset_path"], data_path="electricity_2012_hour.csv",flag='val',size=[L, 0, L])
+
+train_loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True, drop_last=True)
+test_loader = DataLoader(test_data, batch_size=args.batch_size, shuffle=False, drop_last=True)
+valid_loader = DataLoader(val_data, batch_size=args.batch_size, shuffle=False, drop_last=True)
+model = TCN(
+        input_size=96,
+        # output_size = 1024,
+        output_size=96, 
+        num_channels=[config["retrieval"]["length"]] * (config["retrieval"]["level"]) + [config["retrieval"]["length"]],
+    ).to(config["retrieval"]["device"])
+# model=torch.load(config["path"]["encoder_path"], map_location='cuda:0')
 
 # May use adaptive softmax to speed up training
-criterion = nn.CrossEntropyLoss()
-
+# criterion = nn.CrossEntropyLoss()
+criterion = nn.MSELoss()
 lr = args.lr
 optimizer = getattr(optim, args.optim)(model.parameters(), lr=lr)
 
@@ -93,22 +111,15 @@ def evaluate(data_source):
     total_loss = 0
     processed_data_size = 0
     with torch.no_grad():
-        for i in range(0, data_source.size(1) - 1, args.validseqlen):
-            if i + args.seq_len - args.validseqlen >= data_source.size(1) - 1:
-                continue
-            data, targets = get_batch(data_source, i, args, evaluation=True)
-            output = model(data)
-
-            # Discard the effective history, just like in training
-            eff_history = args.seq_len - args.validseqlen
-            final_output = output[:, eff_history:].contiguous().view(-1, n_words)
-            final_target = targets[:, eff_history:].contiguous().view(-1)
-
-            loss = criterion(final_output, final_target)
+        for i, (seq, labels, _, _) in enumerate(tqdm(train_loader)):
+            input = torch.tensor(seq).transpose(1, 2).float().to(config["retrieval"]["device"])
+            labels = torch.tensor(labels).transpose(1, 2).float().to(config["retrieval"]["device"])
+            output = model(input)
+            loss = criterion(output, labels)
 
             # Note that we don't add TAR loss here
-            total_loss += (data.size(1) - eff_history) * loss.item()
-            processed_data_size += data.size(1) - eff_history
+            total_loss += (len(data_source)) * loss.item()
+            processed_data_size += len(data_source)
         return total_loss / processed_data_size
 
 
@@ -118,20 +129,11 @@ def train():
     model.train()
     total_loss = 0
     start_time = time.time()
-    for batch_idx, i in enumerate(range(0, train_data.size(1) - 1, args.validseqlen)):
-        if i + args.seq_len - args.validseqlen >= train_data.size(1) - 1:
-            continue
-        data, targets = get_batch(train_data, i, args)
-        optimizer.zero_grad()
-        output = model(data)
-
-        # Discard the effective history part
-        eff_history = args.seq_len - args.validseqlen
-        if eff_history < 0:
-            raise ValueError("Valid sequence length must be smaller than sequence length!")
-        final_target = targets[:, eff_history:].contiguous().view(-1)
-        final_output = output[:, eff_history:].contiguous().view(-1, n_words)
-        loss = criterion(final_output, final_target)
+    for i, (seq, labels, _, _) in enumerate(tqdm(train_loader)):
+        input = torch.tensor(seq).transpose(1, 2).float().to(config["retrieval"]["device"])
+        labels = torch.tensor(labels).transpose(1, 2).float().to(config["retrieval"]["device"])
+        output = model(input)
+        loss = criterion(output, labels)
 
         loss.backward()
         if args.clip > 0:
@@ -140,12 +142,12 @@ def train():
 
         total_loss += loss.item()
 
-        if batch_idx % args.log_interval == 0 and batch_idx > 0:
+        if i % args.log_interval == 0 and i > 0:
             cur_loss = total_loss / args.log_interval
             elapsed = time.time() - start_time
             print('| epoch {:3d} | {:5d}/{:5d} batches | lr {:02.5f} | ms/batch {:5.5f} | '
                   'loss {:5.2f} | ppl {:8.2f}'.format(
-                epoch, batch_idx, train_data.size(1) // args.validseqlen, lr,
+                epoch, i, len(train_data) // args.validseqlen, lr,
                 elapsed * 1000 / args.log_interval, cur_loss, math.exp(cur_loss)))
             total_loss = 0
             start_time = time.time()
