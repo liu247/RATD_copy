@@ -79,8 +79,8 @@ with open(path, "r") as f:
 
 config["retrieval"]["encoder"] = args.encoder
 
-# corpus = data_generator(args)
-# n_words = len(corpus.dictionary)
+corpus = data_generator(args)
+n_words = len(corpus.dictionary)
 
 L=config["retrieval"]["L"]
 H=config["retrieval"]["H"]
@@ -111,7 +111,7 @@ def evaluate(data_source):
     total_loss = 0
     processed_data_size = 0
     with torch.no_grad():
-        for i, (seq, labels, _, _) in enumerate(tqdm(train_loader)):
+        for i, (seq, labels, _, _) in enumerate(tqdm(data_source)):
             input = torch.tensor(seq).transpose(1, 2).float().to(config["retrieval"]["device"])
             labels = torch.tensor(labels).transpose(1, 2).float().to(config["retrieval"]["device"])
             output = model(input)
@@ -162,8 +162,8 @@ if __name__ == "__main__":
         for epoch in range(1, args.epochs+1):
             epoch_start_time = time.time()
             train()
-            val_loss = evaluate(val_data)
-            test_loss = evaluate(test_data)
+            val_loss = evaluate(valid_loader)
+            test_loss = evaluate(test_loader)
 
             print('-' * 89)
             print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
